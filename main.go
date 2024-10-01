@@ -1,7 +1,7 @@
 package main
 
 import (
-	"slie/cmd"
+	"github.com/NurislamSabyrzhan/slie/cmd"
 )
 
 func main() {

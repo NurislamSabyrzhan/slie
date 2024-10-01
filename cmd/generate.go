@@ -16,7 +16,8 @@ var generateCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
-		generateFiles(name)
+		crud, _ := cmd.Flags().GetBool("crud")
+		generateFiles(name, crud)
 	},
 }
 
@@ -32,14 +33,21 @@ var repositoryCmd = &cobra.Command{
 }
 
 func init() {
+	generateCmd.Flags().BoolP("crud", "c", false, "Generate CRUD operations")
 	rootCmd.AddCommand(generateCmd)
 	rootCmd.AddCommand(repositoryCmd)
 }
 
-func generateFiles(name string) {
-	generateRouter(name)
-	generateController(name)
-	generateUsecase(name)
+func generateFiles(name string, crud bool) {
+	if crud {
+		generateRouter(name)
+		generateController(name)
+		generateUsecase(name)
+	} else {
+		generateRouterWithoutCRUD(name)
+		generateControllerWithoutCRUD(name)
+		generateUsecaseWithoutCRUD(name)
+	}
 }
 
 func generateRouter(name string) {
@@ -144,6 +152,66 @@ func (u *{{.LowerName}}UseCase) Delete() string {
 	generateFile("usecase", name, tmpl)
 }
 
+func generateRouterWithoutCRUD(name string) {
+	tmpl := `package router
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"newserver/internal/controller"
+	"newserver/internal/usecase"
+)
+
+func New{{.Name}}Router(app *fiber.App, useCase usecase.{{.Name}}UseCase) {
+	ctrl := controller.New{{.Name}}Controller(useCase)
+	{{.LowerName}} := app.Group("/{{.LowerName}}")
+
+	// Add your custom routes here
+}
+`
+	generateFile("router", name, tmpl)
+}
+
+func generateControllerWithoutCRUD(name string) {
+	tmpl := `package controller
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"newserver/internal/usecase"
+)
+
+type {{.Name}}Controller struct {
+	useCase usecase.{{.Name}}UseCase
+}
+
+func New{{.Name}}Controller(useCase usecase.{{.Name}}UseCase) *{{.Name}}Controller {
+	return &{{.Name}}Controller{useCase: useCase}
+}
+
+// Add your custom controller methods here
+`
+	generateFile("controller", name, tmpl)
+}
+
+func generateUsecaseWithoutCRUD(name string) {
+	tmpl := `package usecase
+
+type {{.Name}}UseCase interface {
+	// Define your custom usecase methods here
+}
+
+type {{.LowerName}}UseCase struct {
+	// Add your dependencies here
+}
+
+func New{{.Name}}UseCase() {{.Name}}UseCase {
+	return &{{.LowerName}}UseCase{}
+}
+
+// Implement your custom usecase methods here
+`
+	generateFile("usecase", name, tmpl)
+}
+
 func generateRepository(name string) {
 	tmpl := `package repository
 
@@ -173,7 +241,7 @@ func generateFile(dir, name, tmpl string) {
 		Name      string
 		LowerName string
 	}{
-		Name:      name,
+		Name:      toUpperCamelCase(name),
 		LowerName: lowerName,
 	}
 
@@ -211,4 +279,11 @@ func toLowerCamelCase(s string) string {
 		return s
 	}
 	return string(append([]byte(strings.ToLower(string(s[0]))), s[1:]...))
+}
+
+func toUpperCamelCase(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return string(append([]byte(strings.ToUpper(string(s[0]))), s[1:]...))
 }

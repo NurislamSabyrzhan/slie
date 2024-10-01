@@ -1,4 +1,4 @@
-module slie
+module github.com/NurislamSabyrzhan/slie
 
 go 1.23.1
 
